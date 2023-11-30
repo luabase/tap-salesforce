@@ -110,8 +110,8 @@ def sync_records(sf, catalog_entry, state, counter, state_msg_threshold):
     catalog_metadata = metadata.to_map(catalog_entry['metadata'])
     replication_key = catalog_metadata.get((), {}).get('replication-key')
     stream_version = get_stream_version(catalog_entry, state)
-    activate_version_message = singer.ActivateVersionMessage(stream=(stream_alias or stream),
-                                                             version=stream_version)
+    # activate_version_message = singer.ActivateVersionMessage(stream=(stream_alias or stream),
+    #                                                          version=stream_version)
 
     start_time = singer_utils.now()
 
@@ -159,7 +159,7 @@ def sync_records(sf, catalog_entry, state, counter, state_msg_threshold):
     # Tables with no replication_key will send an
     # activate_version message for the next sync
     if not replication_key:
-        singer.write_message(activate_version_message)
+        # singer.write_message(activate_version_message)
         state = singer.write_bookmark(
             state, catalog_entry['tap_stream_id'], 'version', None)
 
