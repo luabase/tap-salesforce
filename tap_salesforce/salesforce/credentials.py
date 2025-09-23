@@ -8,15 +8,21 @@ from simple_salesforce import SalesforceLogin
 LOGGER = logging.getLogger(__name__)
 
 
-OAuthCredentials = namedtuple("OAuthCredentials", ("client_id", "client_secret", "refresh_token"))
+OAuthCredentials = namedtuple("OAuthCredentials", ("client_id", "client_secret", "refresh_token", "login_domain"))
+PasswordCredentials = namedtuple("PasswordCredentials", ("username", "password", "security_token", "login_domain"))
 
-PasswordCredentials = namedtuple("PasswordCredentials", ("username", "password", "security_token"))
+REQUIRED_CONFIG_KEYS = {
+    "OAuthCredentials": ["client_id", "client_secret", "refresh_token"],
+    "PasswordCredentials": ["username", "password", "security_token"],
+}
 
 
 def parse_credentials(config):
     for cls in reversed((OAuthCredentials, PasswordCredentials)):
         creds = cls(*(config.get(key) for key in cls._fields))
-        if all(creds):
+        required_keys = REQUIRED_CONFIG_KEYS[cls.__name__]
+        required_values = [config.get(key) for key in required_keys]
+        if all(required_values):
             return creds
 
     raise Exception("Cannot create credentials from config.")
@@ -71,10 +77,14 @@ class SalesforceAuthOAuth(SalesforceAuth):
     @property
     def _login_url(self):
         login_url = "https://login.salesforce.com/services/oauth2/token"
-
+        if self._credentials.login_domain:
+            login_url = login_url.replace("login.salesforce.com", self._credentials.login_domain)
+            LOGGER.info(f"Using user provided login domain: {self._credentials.login_domain}")
+            return login_url
         if self.is_sandbox:
-            login_url = "https://test.salesforce.com/services/oauth2/token"
-
+            login_url = login_url.replace("login.salesforce.com", "test.salesforce.com")
+            LOGGER.info("Sandbox mode detected, using test.salesforce.com")
+            return login_url
         return login_url
 
     def login(self):
